@@ -13,6 +13,9 @@ struct UTXO: Codable, Identifiable {
     /// Index of this output in the transaction
     let outputIndex: UInt32
 
+    /// Currency code for this UTXO
+    let currency: String
+
     /// The actual output data
     let output: TransactionOutput
 
@@ -32,6 +35,7 @@ struct UTXO: Codable, Identifiable {
     init(
         transactionId: String,
         outputIndex: UInt32,
+        currency: String = "MTOK",
         output: TransactionOutput,
         height: UInt32,
         createdAt: Date = Date(),
@@ -40,6 +44,7 @@ struct UTXO: Codable, Identifiable {
     ) {
         self.transactionId = transactionId
         self.outputIndex = outputIndex
+        self.currency = currency
         self.output = output
         self.height = height
         self.createdAt = createdAt
@@ -53,6 +58,7 @@ struct UTXO: Codable, Identifiable {
             UTXO(
                 transactionId: transaction.id,
                 outputIndex: UInt32(index),
+                currency: transaction.currency,
                 output: output,
                 height: height,
                 createdAt: Date(timeIntervalSince1970: Double(transaction.timestamp) / 1000.0)
@@ -101,18 +107,35 @@ struct UTXOSet: Codable {
     }
 
     /// Get unspent UTXOs for a specific address
-    func unspent(for address: String) -> [UTXO] {
-        unspent().filter { $0.output.address == address }
+    func unspent(for address: String, currency: String? = nil) -> [UTXO] {
+        var result = unspent().filter { $0.output.address == address }
+        if let currency = currency {
+            result = result.filter { $0.currency == currency }
+        }
+        return result
     }
 
-    /// Calculate total balance for an address
-    func balance(for address: String) -> UInt64 {
-        unspent(for: address).reduce(0) { $0 + $1.output.amount }
+    /// Calculate total balance for an address (optionally filtered by currency)
+    func balance(for address: String, currency: String? = nil) -> UInt64 {
+        unspent(for: address, currency: currency).reduce(0) { $0 + $1.output.amount }
+    }
+
+    /// Get balances grouped by currency
+    func balancesByCurrency(for address: String) -> [String: UInt64] {
+        var balances: [String: UInt64] = [:]
+        let utxos = unspent(for: address)
+
+        for utxo in utxos {
+            balances[utxo.currency, default: 0] += utxo.output.amount
+        }
+
+        return balances
     }
 
     /// Select UTXOs for a payment (simple greedy selection)
-    func selectForPayment(from address: String, amount: UInt64) -> [UTXO]? {
-        let available = unspent(for: address).sorted { $0.output.amount > $1.output.amount }
+    func selectForPayment(from address: String, amount: UInt64, currency: String) -> [UTXO]? {
+        let available = unspent(for: address, currency: currency)
+            .sorted { $0.output.amount > $1.output.amount }
         var selected: [UTXO] = []
         var total: UInt64 = 0
 

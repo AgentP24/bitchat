@@ -196,6 +196,7 @@ class WalletManager: ObservableObject {
     func createPayment(
         to recipientAddress: String,
         amount: UInt64,
+        currency: String = "MTOK",
         fee: UInt64 = 1000, // Default 0.00001 MT
         memo: String? = nil
     ) throws -> Transaction {
@@ -205,8 +206,12 @@ class WalletManager: ObservableObject {
 
         let address = wallet.identity.address
 
-        // Select UTXOs for payment
-        guard let selectedUtxos = utxoSet.selectForPayment(from: address, amount: amount + fee) else {
+        // Select UTXOs for payment (currency-specific)
+        guard let selectedUtxos = utxoSet.selectForPayment(
+            from: address,
+            amount: amount + fee,
+            currency: currency
+        ) else {
             throw WalletError.insufficientFunds
         }
 
@@ -232,6 +237,7 @@ class WalletManager: ObservableObject {
 
         // Create and sign transaction
         var transaction = Transaction.create(
+            currency: currency,
             inputs: inputs,
             outputs: outputs,
             fee: fee,
@@ -245,12 +251,33 @@ class WalletManager: ObservableObject {
     }
 
     /// Create a genesis transaction (for testing or initial distribution)
-    func createGenesis(recipients: [(address: String, amount: UInt64)]) throws -> Transaction {
+    func createGenesis(
+        currency: String = "MTOK",
+        recipients: [(address: String, amount: UInt64)]
+    ) throws -> Transaction {
         guard let wallet = currentWallet else {
             throw WalletError.noWalletSelected
         }
 
-        return try Transaction.genesis(recipients: recipients, senderIdentity: wallet.identity)
+        return try Transaction.genesis(
+            currency: currency,
+            recipients: recipients,
+            senderIdentity: wallet.identity
+        )
+    }
+
+    /// Get balances for all currencies
+    func getBalancesByCurrency(for wallet: Wallet) -> [String: WalletBalance] {
+        let address = wallet.identity.address
+        let balanceDict = utxoSet.balancesByCurrency(for: address)
+
+        var result: [String: WalletBalance] = [:]
+        for (currency, amount) in balanceDict {
+            let utxoCount = utxoSet.unspent(for: address, currency: currency).count
+            result[currency] = WalletBalance(confirmed: amount, pending: 0, utxoCount: utxoCount)
+        }
+
+        return result
     }
 
     // MARK: - Storage

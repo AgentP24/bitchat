@@ -7,8 +7,11 @@ struct Transaction: Codable, Identifiable {
     /// Unique transaction identifier (SHA-256 hash of transaction data)
     let id: String
 
-    /// Version of transaction format
+    /// Version of transaction format (v2 for multi-currency)
     let version: UInt8
+
+    /// Currency code (4 bytes, e.g., "MTOK", "WBTC")
+    let currency: String
 
     /// Inputs consuming previous UTXOs
     var inputs: [TransactionInput]
@@ -34,10 +37,14 @@ struct Transaction: Codable, Identifiable {
     /// Number of confirmations in the mesh (updated as it propagates)
     var confirmations: UInt32
 
+    /// Transaction type (normal, atomic swap, etc.)
+    var txType: TransactionType
+
     /// Memberwise initializer
     init(
         id: String,
-        version: UInt8 = 1,
+        version: UInt8 = 2,
+        currency: String = "MTOK",
         inputs: [TransactionInput],
         outputs: [TransactionOutput],
         fee: UInt64,
@@ -45,10 +52,12 @@ struct Transaction: Codable, Identifiable {
         memo: String? = nil,
         senderPublicKey: Data,
         signature: Data? = nil,
-        confirmations: UInt32 = 0
+        confirmations: UInt32 = 0,
+        txType: TransactionType = .standard
     ) {
         self.id = id
         self.version = version
+        self.currency = currency
         self.inputs = inputs
         self.outputs = outputs
         self.fee = fee
@@ -57,18 +66,22 @@ struct Transaction: Codable, Identifiable {
         self.senderPublicKey = senderPublicKey
         self.signature = signature
         self.confirmations = confirmations
+        self.txType = txType
     }
 
     /// Create a new transaction (calculates ID automatically)
     static func create(
+        currency: String = "MTOK",
         inputs: [TransactionInput],
         outputs: [TransactionOutput],
         fee: UInt64,
         memo: String? = nil,
-        senderPublicKey: Data
+        senderPublicKey: Data,
+        txType: TransactionType = .standard
     ) -> Transaction {
         let timestamp = UInt64(Date().timeIntervalSince1970 * 1000)
         let id = calculateTransactionId(
+            currency: currency,
             inputs: inputs,
             outputs: outputs,
             fee: fee,
@@ -78,7 +91,8 @@ struct Transaction: Codable, Identifiable {
 
         return Transaction(
             id: id,
-            version: 1,
+            version: 2,
+            currency: currency,
             inputs: inputs,
             outputs: outputs,
             fee: fee,
@@ -86,12 +100,14 @@ struct Transaction: Codable, Identifiable {
             memo: memo,
             senderPublicKey: senderPublicKey,
             signature: nil,
-            confirmations: 0
+            confirmations: 0,
+            txType: txType
         )
     }
 
     /// Calculate transaction ID (SHA-256 hash)
     static func calculateTransactionId(
+        currency: String = "MTOK",
         inputs: [TransactionInput],
         outputs: [TransactionOutput],
         fee: UInt64,
@@ -101,7 +117,10 @@ struct Transaction: Codable, Identifiable {
         var hasher = SHA256()
 
         // Hash version
-        hasher.update(data: Data([1])) // version 1
+        hasher.update(data: Data([2])) // version 2
+
+        // Hash currency code
+        hasher.update(data: Data(currency.utf8))
 
         // Hash inputs
         for input in inputs {
@@ -213,10 +232,20 @@ struct Transaction: Codable, Identifiable {
             return .invalid(reason: "Invalid transaction signature")
         }
 
-        // Check inputs exist
+        // Check currency code format
+        guard Currency.isValidCode(currency) else {
+            return .invalid(reason: "Invalid currency code: \(currency)")
+        }
+
+        // Check inputs exist and currency consistency
         for input in inputs {
-            guard utxoSet[input.utxoReference] != nil else {
+            guard let utxo = utxoSet[input.utxoReference] else {
                 return .invalid(reason: "Input UTXO not found: \(input.utxoReference)")
+            }
+
+            // Ensure all inputs are same currency (except atomic swaps)
+            if txType != .atomicSwap && utxo.currency != currency {
+                return .invalid(reason: "Currency mismatch: expected \(currency), found \(utxo.currency)")
             }
         }
 
@@ -224,8 +253,11 @@ struct Transaction: Codable, Identifiable {
         let inputAmount = totalInputAmount(utxoSet: utxoSet)
         let outputAmount = totalOutputAmount()
 
-        guard inputAmount >= outputAmount + fee else {
-            return .invalid(reason: "Insufficient input amount")
+        // Genesis transactions don't need input validation
+        if txType != .genesis {
+            guard inputAmount >= outputAmount + fee else {
+                return .invalid(reason: "Insufficient input amount")
+            }
         }
 
         // Check timestamp is recent (within 1 hour)
@@ -258,21 +290,32 @@ enum TransactionValidationResult {
     }
 }
 
+// MARK: - Transaction Type
+enum TransactionType: String, Codable {
+    case standard           // Normal transaction
+    case genesis           // Initial distribution
+    case atomicSwap        // Cross-currency atomic swap
+    case htlc              // Hashed Timelock Contract
+}
+
 // MARK: - Genesis Transaction
 extension Transaction {
     /// Create a genesis transaction (initial token distribution)
     static func genesis(
+        currency: String = "MTOK",
         recipients: [(address: String, amount: UInt64)],
         senderIdentity: PaymentIdentity
     ) throws -> Transaction {
         let outputs = recipients.map { TransactionOutput(address: $0.address, amount: $0.amount) }
 
         var tx = Transaction.create(
+            currency: currency,
             inputs: [], // No inputs for genesis
             outputs: outputs,
             fee: 0,
-            memo: "Genesis transaction - Initial MeshToken distribution",
-            senderPublicKey: senderIdentity.publicKey
+            memo: "Genesis transaction - Initial \(currency) distribution",
+            senderPublicKey: senderIdentity.publicKey,
+            txType: .genesis
         )
 
         try tx.sign(with: senderIdentity)

@@ -2,11 +2,11 @@
 
 ## Overview
 
-MeshPay is a decentralized peer-to-peer payment protocol built on top of BitChat's BLE mesh networking infrastructure. It enables secure, private, offline value transfers without reliance on internet connectivity, central servers, or user identifiers.
+MeshPay is a decentralized peer-to-peer payment protocol built on top of BitChat's BLE mesh networking infrastructure. It enables secure, private, offline value transfers without reliance on internet connectivity, central servers, or user identifiers. Version 1.1 adds multi-currency support, atomic swaps via HTLCs, hardware wallet integration, and fiat funding capabilities.
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** January 16, 2026
-**Status:** Initial Implementation
+**Status:** Multi-Currency & Hardware Wallet Support
 
 ---
 
