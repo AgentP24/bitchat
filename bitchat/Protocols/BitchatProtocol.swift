@@ -69,18 +69,24 @@ import CoreBluetooth
 enum MessageType: UInt8 {
     // Public messages (unencrypted)
     case announce = 0x01        // "I'm here" with nickname
-    case message = 0x02         // Public chat message  
+    case message = 0x02         // Public chat message
     case leave = 0x03           // "I'm leaving"
     case requestSync = 0x21     // GCS filter-based sync request (local-only)
-    
+
     // Noise encryption
     case noiseHandshake = 0x10  // Handshake (init or response determined by payload)
     case noiseEncrypted = 0x11  // All encrypted payloads (messages, receipts, etc.)
-    
+
     // Fragmentation (simplified)
     case fragment = 0x20        // Single fragment type for large messages
     case fileTransfer = 0x22    // Binary file/audio/image payloads
-    
+
+    // MeshPay payment protocol
+    case paymentTx = 0x30       // Transaction broadcast
+    case balanceQuery = 0x31    // Balance query request
+    case balanceResponse = 0x32 // Balance query response
+    case conflictVote = 0x33    // Double-spend conflict vote
+
     var description: String {
         switch self {
         case .announce: return "announce"
@@ -91,6 +97,10 @@ enum MessageType: UInt8 {
         case .noiseEncrypted: return "noiseEncrypted"
         case .fragment: return "fragment"
         case .fileTransfer: return "fileTransfer"
+        case .paymentTx: return "paymentTx"
+        case .balanceQuery: return "balanceQuery"
+        case .balanceResponse: return "balanceResponse"
+        case .conflictVote: return "conflictVote"
         }
     }
 }
@@ -108,7 +118,11 @@ enum NoisePayloadType: UInt8 {
     // Verification (QR-based OOB binding)
     case verifyChallenge = 0x10     // Verification challenge
     case verifyResponse  = 0x11     // Verification response
-    
+    // MeshPay encrypted payments
+    case paymentRequest = 0x20      // Private payment request
+    case payment = 0x21             // Private payment transaction
+    case paymentReceipt = 0x22      // Payment confirmation receipt
+
     var description: String {
         switch self {
         case .privateMessage: return "privateMessage"
@@ -116,6 +130,9 @@ enum NoisePayloadType: UInt8 {
         case .delivered: return "delivered"
         case .verifyChallenge: return "verifyChallenge"
         case .verifyResponse: return "verifyResponse"
+        case .paymentRequest: return "paymentRequest"
+        case .payment: return "payment"
+        case .paymentReceipt: return "paymentReceipt"
         }
     }
 }
@@ -179,6 +196,12 @@ protocol BitchatDelegate: AnyObject {
     // Bluetooth state updates for user notifications
     func didUpdateBluetoothState(_ state: CBManagerState)
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?)
+
+    // MeshPay payment events
+    func didReceiveTransaction(_ transaction: MeshPayTransaction, from peerID: PeerID)
+    func didReceivePaymentRequest(_ request: MeshPayPaymentRequest, from peerID: PeerID)
+    func didReceiveBalanceQuery(from peerID: PeerID, queryId: String)
+    func didReceiveBalanceResponse(from peerID: PeerID, balance: UInt64, queryId: String)
 }
 
 // Provide default implementation to make it effectively optional
@@ -186,7 +209,7 @@ extension BitchatDelegate {
     func isFavorite(fingerprint: String) -> Bool {
         return false
     }
-    
+
     func didUpdateMessageDeliveryStatus(_ messageID: String, status: DeliveryStatus) {
         // Default empty implementation
     }
@@ -196,6 +219,22 @@ extension BitchatDelegate {
     }
 
     func didReceivePublicMessage(from peerID: PeerID, nickname: String, content: String, timestamp: Date, messageID: String?) {
+        // Default empty implementation
+    }
+
+    func didReceiveTransaction(_ transaction: MeshPayTransaction, from peerID: PeerID) {
+        // Default empty implementation
+    }
+
+    func didReceivePaymentRequest(_ request: MeshPayPaymentRequest, from peerID: PeerID) {
+        // Default empty implementation
+    }
+
+    func didReceiveBalanceQuery(from peerID: PeerID, queryId: String) {
+        // Default empty implementation
+    }
+
+    func didReceiveBalanceResponse(from peerID: PeerID, balance: UInt64, queryId: String) {
         // Default empty implementation
     }
 }

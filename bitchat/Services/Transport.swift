@@ -62,6 +62,13 @@ protocol Transport: AnyObject {
     // Pending file management (BCH-01-002: files held in memory until user accepts)
     func acceptPendingFile(id: String) -> URL?
     func declinePendingFile(id: String)
+
+    // MeshPay payment protocol
+    func broadcastTransaction(_ transaction: Transaction)
+    func sendPaymentRequest(_ request: PaymentRequest, to peerID: PeerID)
+    func queryBalance(_ address: String)
+    func respondToBalanceQuery(peerID: PeerID, queryId: String, balance: UInt64, utxoCount: Int)
+    func sendConflictVote(_ vote: ConflictVotePacket)
 }
 
 extension Transport {
@@ -77,6 +84,13 @@ extension Transport {
 
     func acceptPendingFile(id: String) -> URL? { nil }
     func declinePendingFile(id: String) {}
+
+    // MeshPay default implementations
+    func broadcastTransaction(_ transaction: Transaction) {}
+    func sendPaymentRequest(_ request: PaymentRequest, to peerID: PeerID) {}
+    func queryBalance(_ address: String) {}
+    func respondToBalanceQuery(peerID: PeerID, queryId: String, balance: UInt64, utxoCount: Int) {}
+    func sendConflictVote(_ vote: ConflictVotePacket) {}
 }
 
 protocol TransportPeerEventsDelegate: AnyObject {
