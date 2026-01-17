@@ -816,7 +816,7 @@ final class BLEService: NSObject {
         switch MessageType(rawValue: type) {
         case .noiseEncrypted, .noiseHandshake:
             return true
-        case .none, .announce, .message, .leave, .requestSync, .fragment, .fileTransfer:
+        case .none, .announce, .message, .leave, .requestSync, .fragment, .fileTransfer, .paymentTx, .balanceQuery, .balanceResponse, .conflictVote:
             return false
         }
     }
@@ -3475,10 +3475,14 @@ extension BLEService {
             
         case .fileTransfer:
             handleFileTransfer(packet, from: senderID)
-            
+
         case .leave:
             handleLeave(packet, from: senderID)
-            
+
+        case .paymentTx, .balanceQuery, .balanceResponse, .conflictVote:
+            // MeshPay protocol messages - handled through delegate
+            SecureLogger.info("📦 Received MeshPay message type: \(packet.type)", category: .session)
+
         case .none:
             SecureLogger.warning("⚠️ Unknown message type: \(packet.type)", category: .session)
             break
@@ -3913,6 +3917,11 @@ extension BLEService {
                 let ts = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000)
                 notifyUI { [weak self] in
                     self?.delegate?.didReceiveNoisePayload(from: peerID, type: .verifyResponse, payload: Data(payloadData), timestamp: ts)
+                }
+            case .payment, .paymentRequest, .paymentReceipt:
+                let ts = Date(timeIntervalSince1970: Double(packet.timestamp) / 1000)
+                notifyUI { [weak self] in
+                    self?.delegate?.didReceiveNoisePayload(from: peerID, type: NoisePayloadType(rawValue: payloadType) ?? .privateMessage, payload: Data(payloadData), timestamp: ts)
                 }
             case .none:
                 SecureLogger.warning("⚠️ Unknown noise payload type: \(payloadType)")

@@ -82,7 +82,7 @@ class WalletManager: ObservableObject {
             throw WalletError.walletNotFound
         }
 
-        let deletedWallet = wallets.remove(at: index)
+        _ = wallets.remove(at: index)
 
         // If deleted wallet was current, set another as current
         if currentWallet?.id == walletId {

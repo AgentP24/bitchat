@@ -61,7 +61,7 @@ class PaymentService: ObservableObject {
             return
         }
 
-        SecureLogger.info("📥 Received transaction: \(transaction.id.prefix(8)) from \(peerID.hexEncodedString().prefix(8))", category: .session)
+        SecureLogger.info("📥 Received transaction: \(transaction.id.prefix(8)) from \(peerID.id.prefix(8))", category: .session)
 
         // Mark as seen
         seenTransactions.insert(transaction.id)
@@ -300,7 +300,7 @@ class PaymentService: ObservableObject {
 
     /// Handle balance response from peer
     func handleBalanceResponse(from peerID: PeerID, balance: UInt64, queryId: String) {
-        SecureLogger.info("💵 Balance from \(peerID.hexEncodedString().prefix(8)): \(balance) units", category: .session)
+        SecureLogger.info("💵 Balance from \(peerID.id.prefix(8)): \(balance) units", category: .session)
         // Could aggregate responses from multiple peers for consensus
     }
 

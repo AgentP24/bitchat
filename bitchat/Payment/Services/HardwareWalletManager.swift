@@ -196,6 +196,7 @@ class HardwareWalletManager: NSObject, ObservableObject {
 
 // MARK: - CBCentralManagerDelegate
 
+@MainActor
 extension HardwareWalletManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         switch central.state {
@@ -261,6 +262,7 @@ extension HardwareWalletManager: CBCentralManagerDelegate {
 
 // MARK: - CBPeripheralDelegate
 
+@MainActor
 extension HardwareWalletManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard error == nil, let services = peripheral.services else {
