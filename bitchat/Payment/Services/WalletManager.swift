@@ -153,10 +153,10 @@ class WalletManager: ObservableObject {
             .filter { tx in
                 tx.outputs.contains { $0.address == address }
             }
-            .reduce(0) { sum, tx in
+            .reduce(0 as UInt64) { sum, tx in
                 let receivedAmount = tx.outputs
                     .filter { $0.address == address }
-                    .reduce(0) { $0 + $1.amount }
+                    .reduce(0 as UInt64) { $0 + $1.amount }
                 return sum + receivedAmount
             }
 
