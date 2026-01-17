@@ -201,7 +201,7 @@ struct Transaction: Codable, Identifiable {
             let dataToSign = self.dataToSign()
             let hash = SHA256.hash(data: dataToSign)
 
-            let publicKey = try P256K.Signing.PublicKey(compressedRepresentation: senderPublicKey)
+            let publicKey = try P256K.Signing.PublicKey(dataRepresentation: senderPublicKey)
             let ecdsaSignature = try P256K.Signing.ECDSASignature(dataRepresentation: signature)
 
             return publicKey.isValidSignature(ecdsaSignature, for: Data(hash))
