@@ -1,8 +1,8 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@" : {
-      "comment" : "Non-localizable symbol used in code",
+    "string_format_placeholder" : {
+      "comment" : "Non-localizable symbol used in code (renamed from %@ for Swift compatibility)",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
