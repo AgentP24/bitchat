@@ -13,7 +13,7 @@ struct PaymentIdentity: Codable {
     /// Generate a new payment identity
     static func generate() throws -> PaymentIdentity {
         let signingKey = try P256K.Signing.PrivateKey()
-        let publicKeyBytes = signingKey.publicKey.compressedRepresentation
+        let publicKeyBytes = signingKey.publicKey.dataRepresentation
         let address = try deriveAddress(from: publicKeyBytes)
 
         return PaymentIdentity(
@@ -27,7 +27,7 @@ struct PaymentIdentity: Codable {
     /// Initialize from existing private key
     init(privateKeyData: Data) throws {
         let signingKey = try P256K.Signing.PrivateKey(dataRepresentation: privateKeyData)
-        let publicKeyBytes = signingKey.publicKey.compressedRepresentation
+        let publicKeyBytes = signingKey.publicKey.dataRepresentation
 
         self.privateKey = privateKeyData
         self.publicKey = publicKeyBytes
