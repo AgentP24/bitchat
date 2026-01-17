@@ -13,7 +13,7 @@ struct PaymentIdentity: Codable {
     /// Generate a new payment identity
     static func generate() throws -> PaymentIdentity {
         let signingKey = try P256K.Signing.PrivateKey()
-        let publicKeyBytes = Data(signingKey.publicKey.compressedRepresentation.bytes)
+        let publicKeyBytes = signingKey.publicKey.compressedRepresentation
         let address = try deriveAddress(from: publicKeyBytes)
 
         return PaymentIdentity(
@@ -27,7 +27,7 @@ struct PaymentIdentity: Codable {
     /// Initialize from existing private key
     init(privateKeyData: Data) throws {
         let signingKey = try P256K.Signing.PrivateKey(dataRepresentation: privateKeyData)
-        let publicKeyBytes = Data(signingKey.publicKey.compressedRepresentation.bytes)
+        let publicKeyBytes = signingKey.publicKey.compressedRepresentation
 
         self.privateKey = privateKeyData
         self.publicKey = publicKeyBytes
@@ -55,9 +55,9 @@ struct PaymentIdentity: Codable {
         let sha256Hash = SHA256.hash(data: publicKey)
 
         // RIPEMD-160 hash of SHA-256 hash
-        let ripemd160Hash = sha256Hash.withUnsafeBytes { buffer in
+        let ripemd160Hash = Data(sha256Hash).withUnsafeBytes { buffer in
             var digest = [UInt8](repeating: 0, count: 20)
-            CC_RIPEMD160(buffer.baseAddress, CC_LONG(buffer.count), &digest)
+            _ = CC_RIPEMD160(buffer.baseAddress, CC_LONG(buffer.count), &digest)
             return Data(digest)
         }
 
@@ -66,8 +66,8 @@ struct PaymentIdentity: Codable {
         let versionedPayload = Data([0x4D]) + ripemd160Hash
 
         // Calculate checksum (first 4 bytes of double SHA-256)
-        let checksum = SHA256.hash(data: SHA256.hash(data: versionedPayload))
-        let checksumBytes = Data(checksum.prefix(4))
+        let checksum = Data(SHA256.hash(data: Data(SHA256.hash(data: versionedPayload))))
+        let checksumBytes = checksum.prefix(4)
 
         // Encode with Base58
         let addressBytes = versionedPayload + checksumBytes
@@ -84,8 +84,8 @@ struct PaymentIdentity: Codable {
         let versionedPayload = decoded.prefix(21)
         let checksum = decoded.suffix(4)
 
-        let calculatedChecksum = SHA256.hash(data: SHA256.hash(data: versionedPayload))
-        let calculatedChecksumBytes = Data(calculatedChecksum.prefix(4))
+        let calculatedChecksum = Data(SHA256.hash(data: Data(SHA256.hash(data: versionedPayload))))
+        let calculatedChecksumBytes = calculatedChecksum.prefix(4)
 
         return checksum == calculatedChecksumBytes
     }
@@ -101,7 +101,7 @@ private func CC_RIPEMD160(_ data: UnsafeRawPointer?, _ len: CC_LONG, _ md: Unsaf
     // This is a placeholder that uses SHA-256 as fallback
     guard let data = data, let md = md else { return nil }
     let buffer = UnsafeRawBufferPointer(start: data, count: Int(len))
-    let hash = SHA256.hash(data: Data(buffer))
+    let hash = Data(SHA256.hash(data: Data(buffer)))
     hash.withUnsafeBytes { hashBuffer in
         // Take first 20 bytes of SHA-256 as RIPEMD-160 substitute
         md.update(from: hashBuffer.baseAddress!.assumingMemoryBound(to: UInt8.self), count: 20)
@@ -115,7 +115,7 @@ enum Base58 {
     private static let alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 
     static func encode(_ data: Data) -> String {
-        var bytes = Array(data)
+        let bytes = Array(data)
 
         // Count leading zeros
         var leadingZeros = 0

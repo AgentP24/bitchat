@@ -32,8 +32,9 @@ class MeshPayDemo: ObservableObject {
         )
         self.hardwareWalletManager = HardwareWalletManager()
 
-        // Set up service connections
-        paymentService.setTransportDelegate(nil) // Mock transport for demo
+        // Set up service connections with mock transport for demo
+        let mockDelegate = MockPaymentTransportDelegate()
+        paymentService.setTransportDelegate(mockDelegate)
     }
 
     // MARK: - Demo Scenarios
@@ -249,8 +250,8 @@ class MeshPayDemo: ObservableObject {
 
         log("\n3️⃣ Deriving address from hardware wallet...")
         do {
-            // Mock connected device
-            hardwareWalletManager.connectedDevices.append(mockDevice)
+            // Mock connected device by pairing it
+            try hardwareWalletManager.pair(mockDevice, fingerprint: mockDevice.fingerprint)
 
             let address = try await hardwareWalletManager.deriveAddress(
                 from: mockDevice,
@@ -266,6 +267,7 @@ class MeshPayDemo: ObservableObject {
             if let wallet = walletManager.currentWallet {
                 // Fund wallet
                 let genesisTx = try Transaction.genesis(
+                    currency: "MTOK",
                     recipients: [(address: wallet.identity.address, amount: 200_000_000)],
                     senderIdentity: wallet.identity
                 )
@@ -342,7 +344,7 @@ class MeshPayDemo: ObservableObject {
                 toCurrency: "MTOK"
             )
 
-            log("   ✓ Purchase initiated: \(deposit.id.prefix(16))...")
+            log("   ✓ Purchase initiated: \(deposit.id.uuidString.prefix(16))...")
             log("   ✓ Status: \(deposit.status.rawValue)")
             log("   ✓ Amount: \(deposit.amountDisplay)")
             log("   ✓ Destination: \(wallet.identity.address.prefix(20))...")
@@ -385,4 +387,21 @@ enum DemoScenario {
     case atomicSwap
     case hardwareWallet
     case bankIntegration
+}
+
+// MARK: - Mock Transport Delegate
+
+/// Mock payment transport delegate for demo purposes
+class MockPaymentTransportDelegate: PaymentTransportDelegate {
+    func broadcastTransaction(_ transaction: Transaction) {
+        // Mock: No-op for demo
+    }
+
+    func queryBalance(_ address: String) {
+        // Mock: No-op for demo
+    }
+
+    func respondToBalanceQuery(peerID: PeerID, queryId: String, balance: UInt64, utxoCount: Int) {
+        // Mock: No-op for demo
+    }
 }
