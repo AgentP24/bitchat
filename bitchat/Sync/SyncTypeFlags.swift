@@ -19,6 +19,11 @@ struct SyncTypeFlags: OptionSet {
         case .fragment: return 5
         case .requestSync: return 6
         case .fileTransfer: return 7
+        case .paymentTx: return 8
+        case .balanceQuery: return 9
+        case .balanceResponse: return 10
+        case .conflictVote: return 11
+        case .none: return nil
         }
     }
 
@@ -32,6 +37,10 @@ struct SyncTypeFlags: OptionSet {
         case 5: return .fragment
         case 6: return .requestSync
         case 7: return .fileTransfer
+        case 8: return .paymentTx
+        case 9: return .balanceQuery
+        case 10: return .balanceResponse
+        case 11: return .conflictVote
         default:
             return nil
         }

@@ -173,6 +173,9 @@ extension ChatViewModel {
         case .verifyChallenge, .verifyResponse:
             // QR verification payloads over Nostr are not supported; ignore in geohash DMs
             break
+        case .paymentRequest, .payment, .paymentReceipt:
+            // MeshPay payment payloads - not handled in geohash DMs
+            break
         }
     }
 
@@ -400,9 +403,12 @@ extension ChatViewModel {
             handleDelivered(payload, senderPubkey: senderPubkey, convKey: convKey)
         case .readReceipt:
             handleReadReceipt(payload, senderPubkey: senderPubkey, convKey: convKey)
-        
+
         // Explicitly list other cases so we get compile-time check if a new case is added in the future
         case .verifyChallenge, .verifyResponse:
+            break
+        case .paymentRequest, .payment, .paymentReceipt:
+            // MeshPay payment payloads - not handled in Nostr DMs
             break
         }
     }
@@ -647,6 +653,9 @@ extension ChatViewModel {
                             case .readReceipt:
                                 handleReadReceipt(payload, senderPubkey: senderPubkey, convKey: targetPeerID)
                             case .verifyChallenge, .verifyResponse:
+                                break
+                            case .paymentRequest, .payment, .paymentReceipt:
+                                // MeshPay payment payloads - not handled in Nostr DMs
                                 break
                             }
                         }

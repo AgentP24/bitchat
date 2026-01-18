@@ -3170,6 +3170,10 @@ final class ChatViewModel: ObservableObject, BitchatDelegate, CommandContextProv
                     }
                 }
             }
+            case .paymentRequest, .payment, .paymentReceipt:
+                // MeshPay payment payloads - not handled in ChatViewModel yet
+                break
+            }
         }
     }
 
